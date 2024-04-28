@@ -18,14 +18,16 @@ exports.verifyAccessToken = async (req, res, next) => {
   const token = authHeader && authHeader.split(" ")[1];
   if (token == null)
     return res.status(401).json({
-      status: 403,
+      status: 401,
+      error: "Unauthorized",
       message:
-        "Unauthorized, Authorization token not found, please login first.",
+        "Authorization token not found, please login first.",
     });
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
         if (err) return res.status(403).json({
             status: 403,
-            message: 'Forbidden, Invalid Access Token, Please login first'
+            error: "Forbidden",
+            message: 'Invalid Access Token, Please login first'
         })
         req.user = user.id
         next();
