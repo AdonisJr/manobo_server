@@ -34,11 +34,11 @@ router
     .route("/")
     .get(JWT.verifyAccessToken, (req, res) => {
         try {
-            const sql = "SELECT * FROM schoolarship ORDER BY created_at DESC";
+            const sql = "SELECT * FROM certificate ORDER BY created_at DESC";
 
             db.query(sql, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/schoolarship/get: ${err}`);
+                    console.log(`Server error controller/certificate/get: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -57,16 +57,15 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/schoolarship/get: ${error}`);
+            console.log(`Server error controller/certificate/get: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
             });
         }
     })
-    .post(upload.array('files', 2), async (req, res) => {
+    .post(upload.single('files'), async (req, res) => {
         const user_id = req.body.id;
-        console.log(user_id)
         const id = crypto.randomUUID().split("-")[4];
         const filePath = req.file?.path || null;
         const credentials = [id, user_id];
@@ -74,9 +73,9 @@ router
         let sql = ""
 
 
-        if (req.files) {
-            sql = `INSERT INTO schoolarship (id, user_id, application_letter, application_extension, grades, grades_extension) 
-            values (?, ?, ?, ?, ?, ?)`;
+        if (filePath) {
+            sql = `INSERT INTO certificate (id, user_id, application_letter, application_extension) 
+            values (?, ?, ?, ?)`;
         } else {
             return res.status(500).json({
                 status: 500,
@@ -84,23 +83,20 @@ router
             });
         }
 
-        if (req.files) {
-            req.files.forEach(file => {
-                const filePath = file.path;
-                const imageBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
-                // Extracting the file extension
-                const extension = getFileExtension(file.originalname);
-                credentials.push(imageBase64, extension);
-                // Optionally, you can delete the uploaded file after reading it
-                fs.unlinkSync(filePath);
-            });
+        if (filePath) {
+            const imageBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
+            // Extracting the file extension
+            const extension = getFileExtension(req.file.originalname);
+            credentials.push(imageBase64, extension);
+            // Optionally, you can delete the uploaded file after reading it
+            fs.unlinkSync(filePath);
         }
 
 
         try {
             db.query(sql, credentials, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/schoolarship/post: ${err}`);
+                    console.log(`Server error controller/certificate/post: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -113,7 +109,7 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/schoolarship/post: ${error}`);
+            console.log(`Server error controller/certificate/post: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -125,22 +121,37 @@ router
 
 router
     .route("/")
-    .put(JWT.verifyAccessToken, async (req, res) => {
+    .put( upload.single('files'), async (req, res) => {
+        const filePath = req.file?.path || null;
         const { id, remarks, status, family_tree } = req.body;
         try {
             let sql = "";
-            sql = `UPDATE schoolarship SET family_tree = ?, remarks = ?, status = ?
-                WHERE id = ?`;
             const params = [
                 family_tree,
                 remarks,
-                status,
-                id,
+                status
             ];
+            if (filePath) {
+                sql = `UPDATE certificate SET family_tree = ?, remarks = ?, status = ?, cert = ?, cert_extension = ?
+                WHERE id = ?`;
+
+                const imageBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
+                // Extracting the file extension
+                const extension = getFileExtension(req.file.originalname);
+                params.push(imageBase64, extension);
+                // Optionally, you can delete the uploaded file after reading it
+                fs.unlinkSync(filePath);
+
+            } else {
+                sql = `UPDATE certificate SET family_tree = ?, remarks = ?, status = ?
+                WHERE id = ?`;
+            }
+
+            params.push(id)
 
             db.query(sql, params, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/schoolarship/put: ${err}`);
+                    console.log(`Server error controller/certificate/put: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -154,7 +165,7 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/schoolarship/put: ${error}`);
+            console.log(`Server error controller/certificate/put: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -165,10 +176,10 @@ router
         const id = req.query.id;
         console.log(id)
         try {
-            const sql = 'DELETE FROM schoolarship WHERE id = ?';
+            const sql = 'DELETE FROM certificate WHERE id = ?';
             db.query(sql, id, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/schoolarship/delete: ${err}`);
+                    console.log(`Server error controller/certificate/delete: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -181,7 +192,7 @@ router
                 })
             })
         } catch (error) {
-            console.log(`Server error controller/schoolarship/delete: ${error}`);
+            console.log(`Server error controller/certificate/delete: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -200,14 +211,14 @@ router.get("/all", (req, res) => {
         const offset = (page - 1) * limit;
         // sql = "SELECT barangay, COUNT(*) as total_cases FROM crime_reported WHERE validated = 1 GROUP BY barangay ORDER BY total_cases DESC";
         let sql = ""
-        sql = "SELECT COUNT(*) as totalCount FROM schoolarship";
+        sql = "SELECT COUNT(*) as totalCount FROM certificate";
 
         const params1 = [];
 
 
         db.query(sql, params1, (err, countResult) => {
             if (err) {
-                console.log(`Server error controller/schoolarship/all/get: ${err}`);
+                console.log(`Server error controller/certificate/all/get: ${err}`);
                 return res.status(500).json({
                     status: 500,
                     message: `Internal Server Error, ${err}`,
@@ -218,9 +229,9 @@ router.get("/all", (req, res) => {
 
             const params2 = [];
 
-            sql = `SELECT schoolarship.*, user.first_name, user.middle_name, 
-            user.last_name, user.suffix FROM schoolarship INNER JOIN user on 
-            user.id = schoolarship.user_id`
+            sql = `SELECT certificate.*, user.first_name, user.middle_name, 
+                user.last_name, user.suffix FROM certificate INNER JOIN user on 
+                user.id = certificate.user_id`
 
 
             sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
@@ -228,7 +239,7 @@ router.get("/all", (req, res) => {
 
             db.query(sql, params2, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/farm/schoolarship/all/get data: ${err}`);
+                    console.log(`Server error controller/bunawan/certificate/all/get data: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,

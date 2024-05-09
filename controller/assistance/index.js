@@ -4,6 +4,29 @@ const crypto = require("node:crypto");
 const db = require("../../utils/database");
 const bcrypt = require("bcrypt");
 const JWT = require("../../middleware/JWT");
+const multer = require('multer');
+const mimeTypes = require("mime-types");
+const path = require('path');
+const fs = require("fs");
+
+function getFileExtension(filename) {
+    return filename.split('.').pop();
+}
+
+// Set up storage for uploaded files
+const storage = multer.diskStorage({
+    destination: function (req, file, cb) {
+        cb(null, 'uploads/'); // specify the directory where you want to save the files
+    },
+    filename: function (req, file, cb) {
+        cb(null, `${file.fieldname}-${Date.now()}${path.extname(file.originalname)}`);
+    }
+});
+
+const upload = multer({
+    storage: storage,
+});
+
 
 // GET ALL AND INSERT ASSISTANCE
 
@@ -12,7 +35,6 @@ router
     .get(JWT.verifyAccessToken, (req, res) => {
         try {
             const sql = "SELECT * FROM assistance";
-
 
             db.query(sql, (err, rows) => {
                 if (err) {
@@ -42,16 +64,39 @@ router
             });
         }
     })
-    .post(JWT.verifyAccessToken, async (req, res) => {
-        const { user_id, type } =
-            req.body;
+    .post(upload.array('files', 2), async (req, res) => {
+        const type = req.query.type || null;
+        const user_id = req.body.id;
         const id = crypto.randomUUID().split("-")[4];
+        const filePath = req.file?.path || null;
+        const credentials = [id, user_id, type];
+
+        let sql = ""
 
 
-        const sql = `INSERT INTO assistance (id, user_id, type) 
-    values (?, ?, ?)`;
+        if (!req.files) {
+            sql = `INSERT INTO assistance (id, user_id, type) 
+            values (?, ?, ?)`;
+        } else {
+            sql = `INSERT INTO assistance (id, user_id, type, application_letter, application_extension, grades, grades_extension) 
+            values (?, ?, ?, ?, ?, ?, ?)`;
+        }
+
+        if (req.files) {
+            req.files.forEach(file => {
+                const filePath = file.path;
+                const imageBase64 = fs.readFileSync(filePath, { encoding: 'base64' });
+                // Extracting the file extension
+                const extension = getFileExtension(file.originalname);
+                credentials.push(imageBase64, extension);
+                // Optionally, you can delete the uploaded file after reading it
+                fs.unlinkSync(filePath);
+            });
+        }
+
+
         try {
-            db.query(sql, [id, user_id, type], (err, rows) => {
+            db.query(sql, credentials, (err, rows) => {
                 if (err) {
                     console.log(`Server error controller/medical/post: ${err}`);
                     return res.status(500).json({
@@ -78,9 +123,9 @@ router
 
 router
     .route("/")
-    .put(JWT.verifyAccessToken, async (req, res) => {
+    .put(JWT.verifyAccessToken, upload.single('image'), async (req, res) => {
         const { id, application_letter, grades, family_tree, medical_abstract, death_certificate, indigency, valid_id, remarks, status } = req.body;
-        
+
         try {
             let sql = "";
             sql = `UPDATE assistance SET application_letter = ?, grades = ?, family_tree = ?, medical_abstract = ?,
