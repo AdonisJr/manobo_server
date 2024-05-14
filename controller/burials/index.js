@@ -195,6 +195,9 @@ router.get("/all", (req, res) => {
     const limit = parseInt(req.query.limit) || 5; // default limit is 10
     const isIndex = req.query.isIndex;
     const q = req.query.q || null;
+    const filter = req.query.filter || null;
+    const dateFrom = req.query.dateFrom || null;
+    const dateTo = req.query.dateTo;
 
     try {
         const offset = (page - 1) * limit;
@@ -203,6 +206,16 @@ router.get("/all", (req, res) => {
         sql = "SELECT COUNT(*) as totalCount FROM burial";
 
         const params1 = [];
+
+        if (filter) {
+            sql += " WHERE status = ?";
+            params1.push(filter)
+        }
+
+        if (dateFrom) {
+            sql += " AND burial.created_at BETWEEN ? AND ?"
+            params1.push(dateFrom + ' 00:00:00', dateTo + ' 23:59:59')
+        }
 
 
         db.query(sql, params1, (err, countResult) => {
@@ -221,6 +234,17 @@ router.get("/all", (req, res) => {
             sql = `SELECT burial.*, user.first_name, user.middle_name, 
                 user.last_name, user.suffix FROM burial INNER JOIN user on 
                 user.id = burial.user_id`
+
+
+            if (filter) {
+                sql += " WHERE status = ?";
+                params2.push(filter)
+            }
+
+            if (dateFrom) {
+                sql += " AND burial.created_at BETWEEN ? AND ?"
+                params2.push(dateFrom, dateTo)
+            }
 
 
             sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"

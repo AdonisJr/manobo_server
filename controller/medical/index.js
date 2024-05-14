@@ -193,6 +193,10 @@ router.get("/all", (req, res) => {
     const limit = parseInt(req.query.limit) || 5; // default limit is 10
     const isIndex = req.query.isIndex;
     const q = req.query.q || null;
+    const filter = req.query.filter || null;
+    const dateFrom = req.query.dateFrom || null;
+    const dateTo = req.query.dateTo;
+console.log(dateFrom)
 
     try {
         const offset = (page - 1) * limit;
@@ -202,6 +206,15 @@ router.get("/all", (req, res) => {
 
         const params1 = [];
 
+        if (filter) {
+            sql += " WHERE status = ?";
+            params1.push(filter)
+        }
+
+        if (dateFrom) {
+            sql += " AND medical.created_at BETWEEN ? AND ?"
+            params1.push(dateFrom + ' 00:00:00', dateTo + ' 23:59:59')
+        }
 
         db.query(sql, params1, (err, countResult) => {
             if (err) {
@@ -220,7 +233,16 @@ router.get("/all", (req, res) => {
             user.last_name, user.suffix FROM medical INNER JOIN user on 
             user.id = medical.user_id`
 
+            if (filter) {
+                sql += " WHERE status = ?";
+                params2.push(filter)
+            }
+            if (dateFrom) {
+                sql += " AND medical.created_at BETWEEN ? AND ?"
+                params2.push(dateFrom, dateTo)
+            }
 
+            console.log(sql)
             sql += " ORDER BY created_at DESC LIMIT ? OFFSET ?"
             params2.push(limit, offset);
 
