@@ -42,19 +42,16 @@ const findId = (req, res, next) => {
 
 router
     .route("/")
-    .get(JWT.verifyAccessToken, (req, res) => {
+    .get( (req, res) => {
         const role = req.query.role || "";
         try {
             let sql = "";
-            if (role) {
-                sql = "SELECT id, first_name, middle_name, last_name, email, gender, phone_number, role FROM user WHERE role = ?";
-            } else {
-                sql = "SELECT * FROM user";
-            }
+            sql = "SELECT * FROM other_info";
+            
 
-            db.query(sql, role, (err, rows) => {
+            db.query(sql, (err, rows) => {
                 if (err) {
-                    console.log(`Server error controller/user/get: ${err}`);
+                    console.log(`Server error controller/other_info/get: ${err}`);
                     return res.status(500).json({
                         status: 500,
                         message: `Internal Server Error, ${err}`,
@@ -73,7 +70,7 @@ router
                 });
             });
         } catch (error) {
-            console.log(`Server error controller/user/post: ${error}`);
+            console.log(`Server error controller/other_info/post: ${error}`);
             res.status(500).json({
                 status: 500,
                 message: `Internal Server Error, ${error}`,
@@ -158,7 +155,7 @@ router
 router
     .route("/")
     .put(JWT.verifyAccessToken, async (req, res) => {
-        const { user_id, birth_date, age, tribe, birth_place, birth_registration, birth_copy, marital_status1, marital_status2, marital_status3, religion, philhealth, fourps, senior_citizen, pensioner, benificiary, school_attendance1, school_name1, school_address1, literacy, dialect, highest_grade, year_completed, school_name2, school_address2, vocational_course, vocational_specify, school_name3, school_address3, special_skills, occupation } =
+        const { user_id, birth_date, age, tribe, birth_place, birth_registration, birth_copy, marital_status1, marital_status2, marital_status3, religion, philhealth, fourps, senior_citizen, pensioner, benificiary, school_attendance1, school_name1, school_address1, literacy, dialect, highest_grade, year_completed, school_name2, school_address2, vocational_course, vocational_specify, school_name3, school_address3, special_skills, occupation, education_status } =
             req.body;
         const credentials = [
             birth_date,
@@ -191,6 +188,7 @@ router
             school_address3,
             special_skills,
             occupation,
+            education_status,
             user_id
         ]
 
@@ -202,7 +200,7 @@ router
                     literacy = ?, dialect = ?, highest_grade = ?, year_completed = ?, 
                     school_name2 = ?, school_address2 = ?, vocational_course = ?,
                     vocational_specify = ?, school_name3 = ?, school_address3 = ?, 
-                    special_skills = ?, occupation = ? WHERE user_id = ?`
+                    special_skills = ?, occupation = ?, education_status = ? WHERE user_id = ?`
         try {
             db.query(sql, credentials, (err, rows) => {
                 if (err) {

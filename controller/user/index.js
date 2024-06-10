@@ -9,6 +9,7 @@ const JWT = require("../../middleware/JWT");
 
 const findEmail = (req, res, next) => {
     const { email } = req.body;
+    console.log(req.body)
     try {
         let sql = "SELECt * FROM user WHERE email = ?";
         db.query(sql, email, (err, rows) => {
@@ -39,15 +40,27 @@ router
     .route("/")
     .get(JWT.verifyAccessToken, (req, res) => {
         const role = req.query.role || "";
+        const q = req.query.q || "";
         try {
             let sql = "";
+            const params = [role]
             if (role) {
-                sql = "SELECT id, first_name, middle_name, last_name, email, gender, phone_number, barangay, role FROM user WHERE role = ?";
+                sql = `SELECT user.id, user.first_name, user.middle_name, user.last_name, user.email, user.gender, user.phone_number, user.barangay, user.role, 
+                other_info.special_skills, other_info.user_id 
+                FROM user 
+                        LEFT JOIN other_info ON other_info.user_id = user.id
+                    WHERE role = ?`;
+                if(q){
+                    sql +=" AND special_skills LIKE ?"
+                    params.push(`%${q}%`)
+                }
             } else {
                 sql = "SELECT * FROM user";
             }
 
-            db.query(sql, role, (err, rows) => {
+            console.log(sql)
+
+            db.query(sql, params, (err, rows) => {
                 if (err) {
                     console.log(`Server error controller/user/get: ${err}`);
                     return res.status(500).json({

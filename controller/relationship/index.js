@@ -13,7 +13,7 @@ router
         const user_id = req.query.user_id || null;
         try {
             const sql = `SELECT 
-            r.id AS rel_id, r.*, u.*, o.*
+            r.id AS rel_id, r.*, u.id as u_id, u.*, o.*
             FROM relationship r 
             INNER JOIN user u ON r.relationship_id = u.id 
             LEFT JOIN other_info o ON o.user_id = u.id 

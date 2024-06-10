@@ -9,6 +9,80 @@ const mimeTypes = require("mime-types");
 const path = require('path');
 const fs = require("fs");
 
+
+const checkSchoolarship = (req, res, next) => {
+    const user_id = req.body.id;
+    const currentYear = new Date().getFullYear();
+    const checkSql = `SELECT COUNT(*) AS count FROM schoolarship WHERE user_id = ? AND YEAR(created_at) = ?`;
+    db.query(checkSql, [user_id, currentYear], (err, rows) => {
+        if (rows[0].count > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: "You have a pending request, you can't request another subsidy this year.",
+            });
+        }
+        next();
+    })
+}
+const checkMedical = (req, res, next) => {
+    const user_id = req.body.id;
+    const currentYear = new Date().getFullYear();
+    const checkSql = `SELECT COUNT(*) AS count FROM medical WHERE user_id = ? AND YEAR(created_at) = ?`;
+    db.query(checkSql, [user_id, currentYear], (err, rows) => {
+        if (rows[0].count > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: "You have a pending request, you can't request another subsidy this year.",
+            });
+        }
+        next();
+    })
+}
+const checkBurial = (req, res, next) => {
+    const user_id = req.body.id;
+    const currentYear = new Date().getFullYear();
+    const checkSql = `SELECT COUNT(*) AS count FROM burial WHERE user_id = ? AND YEAR(created_at) = ?`;
+    db.query(checkSql, [user_id, currentYear], (err, rows) => {
+        if (rows[0].count > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: "You have a pending request, you can't request another subsidy this year.",
+            });
+        }
+        next();
+    })
+}
+
+const checkCertification = (req, res, next) => {
+    const user_id = req.body.id;
+    const currentYear = new Date().getFullYear();
+    const checkSql = `SELECT COUNT(*) AS count FROM certificate WHERE user_id = ? AND YEAR(created_at) = ?`;
+    db.query(checkSql, [user_id, currentYear], (err, rows) => {
+        if (rows[0].count > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: "You have a pending request, you can't request another subsidy this year.",
+            });
+        }
+        next();
+    })
+}
+
+const checkRecommendation = (req, res, next) => {
+    const user_id = req.body.id;
+    const currentYear = new Date().getFullYear();
+    const checkSql = `SELECT COUNT(*) AS count FROM recommendation WHERE user_id = ? AND YEAR(created_at) = ?`;
+    db.query(checkSql, [user_id, currentYear], (err, rows) => {
+        if (rows[0].count > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: "You have a pending request, you can't request another subsidy this year.",
+            });
+        }
+        next();
+    })
+}
+
 function getFileExtension(filename) {
     return filename.split('.').pop();
 }
@@ -33,10 +107,11 @@ const upload = multer({
 router
     .route("/")
     .get(JWT.verifyAccessToken, (req, res) => {
+        const user_id = req.query.user_id;
         try {
-            const sql = "SELECT * FROM medical ORDER BY created_at DESC";
+            const sql = "SELECT * FROM medical WHERE user_id = ? ORDER BY created_at DESC";
 
-            db.query(sql, (err, rows) => {
+            db.query(sql, [user_id], (err, rows) => {
                 if (err) {
                     console.log(`Server error controller/medical/get: ${err}`);
                     return res.status(500).json({
@@ -64,12 +139,12 @@ router
             });
         }
     })
-    .post(upload.array('files', 2), async (req, res) => {
+    .post(upload.array('files', 2), checkMedical, checkBurial, checkSchoolarship, checkCertification, checkRecommendation, async (req, res) => {
         const user_id = req.body.id;
-        console.log(user_id)
         const id = crypto.randomUUID().split("-")[4];
         const filePath = req.file?.path || null;
         const credentials = [id, user_id];
+
 
         let sql = ""
 
@@ -98,6 +173,7 @@ router
 
 
         try {
+
             db.query(sql, credentials, (err, rows) => {
                 if (err) {
                     console.log(`Server error controller/schoolarship/post: ${err}`);
@@ -196,7 +272,7 @@ router.get("/all", (req, res) => {
     const filter = req.query.filter || null;
     const dateFrom = req.query.dateFrom || null;
     const dateTo = req.query.dateTo;
-console.log(dateFrom)
+    console.log(dateFrom)
 
     try {
         const offset = (page - 1) * limit;
